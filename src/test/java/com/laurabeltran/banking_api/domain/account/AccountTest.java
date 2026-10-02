@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 public class AccountTest {
 
     @Test
-    void shouldDeposityMoney() {
+    void shouldDepositMoney() {
 
         Account account = new Account(
                 1,
@@ -27,18 +27,61 @@ public class AccountTest {
     }
 
     @Test
-    void shouldNotWithdrawMoreThanBalance() {
+    void shouldNotDepositNullAmount() {
 
         Account account = new Account(
                 1,
-                "005678",
+                "001234",
                 new BigDecimal("10000"),
                 "COP");
 
         assertThrows(
-                IllegalArgumentException.class,
+                InvalidAmountException.class,
+                () -> account.deposit(null));
+    }
+
+    @Test
+    void shouldNotDepositInvalidAmount() {
+
+        Account account = new Account(
+                1,
+                "001234",
+                new BigDecimal("10000"),
+                "COP");
+
+        assertThrows(
+                InvalidAmountException.class,
+                () -> account.deposit(new BigDecimal("-1500")));
+
+    }
+
+    @Test
+    void shouldNotWithdrawMoreThanBalance() {
+
+        Account account = new Account(
+                1,
+                "001234",
+                new BigDecimal("10000"),
+                "COP");
+
+        assertThrows(
+                InsufficientBalanceException.class,
                 () -> account.withdraw(new BigDecimal("15000")));
 
+    }
+
+    @Test
+    void shouldNotWithdrawInvalidAmount() {
+
+        Account account = new Account(
+                1,
+                "001234",
+                new BigDecimal("10000"),
+                "COP");
+
+        assertThrows(
+                InvalidAmountException.class,
+                () -> account.withdraw(new BigDecimal("-500")));
     }
 
 }
