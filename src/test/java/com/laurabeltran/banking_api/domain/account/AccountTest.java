@@ -10,6 +10,32 @@ import org.junit.jupiter.api.Test;
 public class AccountTest {
 
     @Test
+    void shouldNotCreateAccountWithNegativeBalance() {
+
+        assertThrows(
+                InvalidAmountException.class,
+                () -> new Account(
+                        1,
+                        "001234",
+                        new BigDecimal("-1000"),
+                        "COP"));
+
+    }
+
+    @Test
+    void shouldNotCreateAccountWithNullBalance() {
+
+        assertThrows(
+                InvalidAmountException.class,
+                () -> new Account(
+                        1,
+                        "001234",
+                        null,
+                        "COP"));
+
+    }
+
+    @Test
     void shouldDepositMoney() {
 
         Account account = new Account(
