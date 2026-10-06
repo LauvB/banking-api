@@ -2,9 +2,12 @@ package com.laurabeltran.banking_api.application.account;
 
 import java.math.BigDecimal;
 
+import org.springframework.stereotype.Service;
+
 import com.laurabeltran.banking_api.application.account.port.AccountRepository;
 import com.laurabeltran.banking_api.domain.account.Account;
 
+@Service
 public class CreateAccountUseCase {
 
     private final AccountRepository accountRepository;
