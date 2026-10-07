@@ -45,4 +45,22 @@ public class PostgreSQLAccountRepository implements AccountRepository {
                         entity.getCurrency()));
     }
 
+    @Override
+    public Account update(Account account) {
+
+        AccountEntity entity = new AccountEntity(
+                account.getId(),
+                account.getAccountNumber(),
+                account.getBalance(),
+                account.getCurrency());
+
+        AccountEntity updatedEntity = jpaAccountRepository.save(entity);
+
+        return new Account(
+                updatedEntity.getId(),
+                updatedEntity.getAccountNumber(),
+                updatedEntity.getBalance(),
+                updatedEntity.getCurrency());
+    }
+
 }

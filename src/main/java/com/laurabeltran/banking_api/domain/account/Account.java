@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 public class Account {
 
     private final int id;
-    private final String accountNumber;
+    private String accountNumber;
     private BigDecimal balance;
     private final String currency;
 
@@ -57,6 +57,15 @@ public class Account {
 
     public String getCurrency() {
         return currency;
+    }
+
+    public void updateAccountNumber(String accountNumber) {
+
+        if (accountNumber == null || accountNumber.isBlank()) {
+            throw new IllegalArgumentException("Account number must not be blank");
+        }
+
+        this.accountNumber = accountNumber;
     }
 
 }
