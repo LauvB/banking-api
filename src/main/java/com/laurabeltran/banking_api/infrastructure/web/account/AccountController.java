@@ -8,9 +8,10 @@ import com.laurabeltran.banking_api.application.account.CreateAccountUseCase;
 import com.laurabeltran.banking_api.application.account.DepositMoneyUseCase;
 import com.laurabeltran.banking_api.application.account.GetAccountUseCase;
 import com.laurabeltran.banking_api.application.account.UpdateAccountUseCase;
+import com.laurabeltran.banking_api.application.account.WithdrawMoneyUseCase;
 import com.laurabeltran.banking_api.application.account.dto.AccountResponse;
 import com.laurabeltran.banking_api.application.account.dto.CreateAccountRequest;
-import com.laurabeltran.banking_api.application.account.dto.DepositRequest;
+import com.laurabeltran.banking_api.application.account.dto.MoneyOperationRequest;
 import com.laurabeltran.banking_api.application.account.dto.UpdateAccountRequest;
 import com.laurabeltran.banking_api.domain.account.Account;
 
@@ -31,17 +32,20 @@ public class AccountController {
     private final GetAccountUseCase getAccountUseCase;
     private final UpdateAccountUseCase updateAccountUseCase;
     private final DepositMoneyUseCase depositMoneyUseCase;
+    private final WithdrawMoneyUseCase withdrawMoneyUseCase;
 
     public AccountController(
             CreateAccountUseCase createAccountUseCase,
             GetAccountUseCase getAccountUseCase,
             UpdateAccountUseCase updateAccountUseCase,
-            DepositMoneyUseCase depositMoneyUseCase) {
+            DepositMoneyUseCase depositMoneyUseCase,
+            WithdrawMoneyUseCase withdrawMoneyUseCase) {
 
         this.createAccountUseCase = createAccountUseCase;
         this.getAccountUseCase = getAccountUseCase;
         this.updateAccountUseCase = updateAccountUseCase;
         this.depositMoneyUseCase = depositMoneyUseCase;
+        this.withdrawMoneyUseCase = withdrawMoneyUseCase;
     }
 
     @PostMapping
@@ -83,9 +87,21 @@ public class AccountController {
     @PostMapping("/{id}/deposit")
     public AccountResponse deposit(
             @PathVariable int id,
-            @Valid @RequestBody DepositRequest request) {
+            @Valid @RequestBody MoneyOperationRequest request) {
 
         Account account = depositMoneyUseCase.execute(
+                id,
+                request.amount());
+
+        return AccountResponse.from(account);
+    }
+
+    @PostMapping("/{id}/withdraw")
+    public AccountResponse withdraw(
+            @PathVariable int id,
+            @Valid @RequestBody MoneyOperationRequest request) {
+
+        Account account = withdrawMoneyUseCase.execute(
                 id,
                 request.amount());
 
