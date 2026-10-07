@@ -5,10 +5,12 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.laurabeltran.banking_api.application.account.CreateAccountUseCase;
+import com.laurabeltran.banking_api.application.account.DepositMoneyUseCase;
 import com.laurabeltran.banking_api.application.account.GetAccountUseCase;
 import com.laurabeltran.banking_api.application.account.UpdateAccountUseCase;
 import com.laurabeltran.banking_api.application.account.dto.AccountResponse;
 import com.laurabeltran.banking_api.application.account.dto.CreateAccountRequest;
+import com.laurabeltran.banking_api.application.account.dto.DepositRequest;
 import com.laurabeltran.banking_api.application.account.dto.UpdateAccountRequest;
 import com.laurabeltran.banking_api.domain.account.Account;
 
@@ -28,15 +30,18 @@ public class AccountController {
     private final CreateAccountUseCase createAccountUseCase;
     private final GetAccountUseCase getAccountUseCase;
     private final UpdateAccountUseCase updateAccountUseCase;
+    private final DepositMoneyUseCase depositMoneyUseCase;
 
     public AccountController(
             CreateAccountUseCase createAccountUseCase,
             GetAccountUseCase getAccountUseCase,
-            UpdateAccountUseCase updateAccountUseCase) {
+            UpdateAccountUseCase updateAccountUseCase,
+            DepositMoneyUseCase depositMoneyUseCase) {
 
         this.createAccountUseCase = createAccountUseCase;
         this.getAccountUseCase = getAccountUseCase;
         this.updateAccountUseCase = updateAccountUseCase;
+        this.depositMoneyUseCase = depositMoneyUseCase;
     }
 
     @PostMapping
@@ -71,6 +76,18 @@ public class AccountController {
         Account account = updateAccountUseCase.execute(
                 id,
                 request.accountNumber());
+
+        return AccountResponse.from(account);
+    }
+
+    @PostMapping("/{id}/deposit")
+    public AccountResponse deposit(
+            @PathVariable int id,
+            @Valid @RequestBody DepositRequest request) {
+
+        Account account = depositMoneyUseCase.execute(
+                id,
+                request.amount());
 
         return AccountResponse.from(account);
     }
