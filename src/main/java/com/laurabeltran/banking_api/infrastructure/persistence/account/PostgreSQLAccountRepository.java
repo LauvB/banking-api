@@ -1,5 +1,7 @@
 package com.laurabeltran.banking_api.infrastructure.persistence.account;
 
+import java.util.Optional;
+
 import org.springframework.stereotype.Repository;
 
 import com.laurabeltran.banking_api.application.account.port.AccountRepository;
@@ -30,6 +32,17 @@ public class PostgreSQLAccountRepository implements AccountRepository {
                 savedEntity.getAccountNumber(),
                 savedEntity.getBalance(),
                 savedEntity.getCurrency());
+    }
+
+    @Override
+    public Optional<Account> findById(int id) {
+
+        return jpaAccountRepository.findById(id)
+                .map(entity -> new Account(
+                        entity.getId(),
+                        entity.getAccountNumber(),
+                        entity.getBalance(),
+                        entity.getCurrency()));
     }
 
 }
