@@ -2,6 +2,7 @@ package com.laurabeltran.banking_api.infrastructure.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -18,7 +19,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST,
+                                "/accounts")
+                        .hasRole("ADMIN")
+                        .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();
@@ -38,7 +43,12 @@ public class SecurityConfig {
                 .roles("USER")
                 .build();
 
-        return new InMemoryUserDetailsManager(testUser);
+        var adminUser = User.withUsername("admin")
+                .password(passwordEncoder.encode("AdminPass123!"))
+                .roles("ADMIN")
+                .build();
+
+        return new InMemoryUserDetailsManager(testUser, adminUser);
     }
 
 }

@@ -8,11 +8,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.authenticated;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -47,4 +50,30 @@ public class AccountControllerSecurityTest {
                 .andExpect(authenticated().withUsername("apiuser"));
     }
 
+    @Test
+    void shouldForbidAccountCreationForUserRole() throws Exception {
+        String credentials = Base64.getEncoder().encodeToString(
+                "apiuser:TestPass123!".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(post("/accounts")
+                .with(csrf())
+                .header(HttpHeaders.AUTHORIZATION, "Basic " + credentials)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldAllowAccountCreationForAdminRole() throws Exception {
+        String credentials = Base64.getEncoder().encodeToString(
+                "admin:AdminPass123!".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(post("/accounts")
+                .with(csrf())
+                .header(HttpHeaders.AUTHORIZATION, "Basic " + credentials)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
+                .andExpect(status().isBadRequest());
+    }
 }
