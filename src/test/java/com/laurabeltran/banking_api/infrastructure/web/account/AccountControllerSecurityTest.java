@@ -10,8 +10,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.authenticated;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -22,8 +23,8 @@ public class AccountControllerSecurityTest {
 
     @Test
     void shouldRejectRequestWithoutCredentials() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/accounts/1"))
-                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+        mockMvc.perform(get("/accounts/1"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -31,9 +32,19 @@ public class AccountControllerSecurityTest {
         String credentials = Base64.getEncoder().encodeToString(
                 "apiuser:wrong-password".getBytes(StandardCharsets.UTF_8));
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/accounts/1")
+        mockMvc.perform(get("/accounts/1")
                 .header(HttpHeaders.AUTHORIZATION, "Basic " + credentials))
-                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldAuthenticateRequestWithValidCredentials() throws Exception {
+        String credentials = Base64.getEncoder().encodeToString(
+                "apiuser:TestPass123!".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(get("/accounts/1")
+                .header(HttpHeaders.AUTHORIZATION, "Basic " + credentials))
+                .andExpect(authenticated().withUsername("apiuser"));
     }
 
 }
