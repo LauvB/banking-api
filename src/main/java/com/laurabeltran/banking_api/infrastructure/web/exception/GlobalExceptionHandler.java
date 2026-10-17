@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.laurabeltran.banking_api.domain.account.AccountAccessDeniedException;
 import com.laurabeltran.banking_api.domain.account.AccountNotFoundException;
 import com.laurabeltran.banking_api.domain.account.InsufficientBalanceException;
 import com.laurabeltran.banking_api.domain.account.InvalidAmountException;
@@ -57,6 +58,28 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleInsufficientBalance(
             InsufficientBalanceException exception) {
+
+        return new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                exception.getMessage(),
+                null);
+    }
+
+    @ExceptionHandler(AccountAccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleAccountAccessDenied(
+            AccountAccessDeniedException exception) {
+
+        return new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                exception.getMessage(),
+                null);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse hadleIllegalArgument(
+            IllegalArgumentException exception) {
 
         return new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),

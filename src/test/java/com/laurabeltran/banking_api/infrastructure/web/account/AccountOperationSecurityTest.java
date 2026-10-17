@@ -1,6 +1,7 @@
 package com.laurabeltran.banking_api.infrastructure.web.account;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,10 +20,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.laurabeltran.banking_api.application.account.port.AccountRepository;
+import com.laurabeltran.banking_api.application.user.port.UserIdentityRepository;
 import com.laurabeltran.banking_api.domain.account.Account;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -35,6 +38,9 @@ public class AccountOperationSecurityTest {
     @MockitoBean
     private AccountRepository accountRepository;
 
+    @MockitoBean
+    private UserIdentityRepository userIdentityRepository;
+
     private String userCredentials() {
         return "Basic " + Base64.getEncoder().encodeToString(
                 "apiuser:TestPass123!".getBytes(StandardCharsets.UTF_8));
@@ -43,9 +49,18 @@ public class AccountOperationSecurityTest {
     @Test
     void shouldAllowUserToDeposit() throws Exception {
         Account account = new Account(
-                1, "ACC-001", new BigDecimal("500.00"), "COP");
+                1,
+                "ACC-001",
+                new BigDecimal("500.00"),
+                "COP",
+                3);
 
-        when(accountRepository.findById(1)).thenReturn(Optional.of(account));
+        when(userIdentityRepository.findIdByUsername("apiuser"))
+                .thenReturn(Optional.of(3));
+
+        when(accountRepository.findById(1))
+                .thenReturn(Optional.of(account));
+
         when(accountRepository.update(any(Account.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -58,15 +73,56 @@ public class AccountOperationSecurityTest {
                         """))
                 .andExpect(status().isOk());
 
+        verify(userIdentityRepository).findIdByUsername("apiuser");
         verify(accountRepository).update(any(Account.class));
+    }
+
+    @Test
+    void shouldForbidUserFromDepositFromAnotherUsersAccount() throws Exception {
+        Account anotherUsersAccount = new Account(
+                2,
+                "ACC-002",
+                new BigDecimal("500.00"),
+                "COP",
+                7);
+
+        when(userIdentityRepository.findIdByUsername("apiuser"))
+                .thenReturn(Optional.of(3));
+
+        when(accountRepository.findById(2))
+                .thenReturn(Optional.of(anotherUsersAccount));
+
+        mockMvc.perform(post("/accounts/2/deposit")
+                .with(csrf())
+                .header(HttpHeaders.AUTHORIZATION, userCredentials())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"amount": 100}
+                        """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403));
+
+        verify(userIdentityRepository).findIdByUsername("apiuser");
+        verify(accountRepository).findById(2);
+        verify(accountRepository, never()).update(any(Account.class));
+
     }
 
     @Test
     void shouldAllowUserToWithdraw() throws Exception {
         Account account = new Account(
-                1, "ACC-001", new BigDecimal("500.00"), "COP");
+                1,
+                "ACC-001",
+                new BigDecimal("500.00"),
+                "COP",
+                3);
 
-        when(accountRepository.findById(1)).thenReturn(Optional.of(account));
+        when(userIdentityRepository.findIdByUsername("apiuser"))
+                .thenReturn(Optional.of(3));
+
+        when(accountRepository.findById(1))
+                .thenReturn(Optional.of(account));
+
         when(accountRepository.update(any(Account.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -79,7 +135,39 @@ public class AccountOperationSecurityTest {
                         """))
                 .andExpect(status().isOk());
 
+        verify(userIdentityRepository).findIdByUsername("apiuser");
         verify(accountRepository).update(any(Account.class));
+    }
+
+    @Test
+    void shouldForbidUserFromWithdrawingFromAnotherUsersAccount() throws Exception {
+        Account anotherUsersAccount = new Account(
+                2,
+                "ACC-002",
+                new BigDecimal("500.00"),
+                "COP",
+                7);
+
+        when(userIdentityRepository.findIdByUsername("apiuser"))
+                .thenReturn(Optional.of(3));
+
+        when(accountRepository.findById(2))
+                .thenReturn(Optional.of(anotherUsersAccount));
+
+        mockMvc.perform(post("/accounts/2/withdraw")
+                .with(csrf())
+                .header(HttpHeaders.AUTHORIZATION, userCredentials())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"amount": 100}
+                        """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403));
+
+        verify(userIdentityRepository).findIdByUsername("apiuser");
+        verify(accountRepository).findById(2);
+        verify(accountRepository, never()).update(any(Account.class));
+
     }
 
 }

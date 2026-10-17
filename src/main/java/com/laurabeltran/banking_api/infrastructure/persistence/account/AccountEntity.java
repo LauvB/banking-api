@@ -2,8 +2,13 @@ package com.laurabeltran.banking_api.infrastructure.persistence.account;
 
 import java.math.BigDecimal;
 
+import com.laurabeltran.banking_api.infrastructure.persistence.user.UserEntity;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -18,6 +23,10 @@ public class AccountEntity {
     private BigDecimal balance;
 
     private String currency;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private UserEntity owner;
 
     protected AccountEntity() {
     }
@@ -43,6 +52,14 @@ public class AccountEntity {
 
     public String getCurrency() {
         return currency;
+    }
+
+    public UserEntity getOwner() {
+        return owner;
+    }
+
+    public void setOwner(UserEntity owner) {
+        this.owner = owner;
     }
 
 }

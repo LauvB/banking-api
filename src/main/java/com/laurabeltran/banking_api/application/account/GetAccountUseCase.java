@@ -2,22 +2,19 @@ package com.laurabeltran.banking_api.application.account;
 
 import org.springframework.stereotype.Service;
 
-import com.laurabeltran.banking_api.application.account.port.AccountRepository;
 import com.laurabeltran.banking_api.domain.account.Account;
-import com.laurabeltran.banking_api.domain.account.AccountNotFoundException;
 
 @Service
 public class GetAccountUseCase {
 
-    private final AccountRepository accountRepository;
+    private final AccountOwnershipService accountOwnershipService;
 
-    public GetAccountUseCase(AccountRepository accountRepository) {
-        this.accountRepository = accountRepository;
+    public GetAccountUseCase(AccountOwnershipService accountOwnershipService) {
+        this.accountOwnershipService = accountOwnershipService;
     }
 
-    public Account execute(int id) {
-        return accountRepository.findById(id)
-                .orElseThrow(() -> new AccountNotFoundException("Account not found with id: " + id));
+    public Account execute(int id, String username) {
+        return accountOwnershipService.getAccountForUser(id, username);
     }
 
 }

@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -23,29 +22,32 @@ public class WithdrawMoneyUseCaseTest {
     @Test
     void shouldWithdrawMoney() {
 
+        AccountOwnershipService service = mock(AccountOwnershipService.class);
         AccountRepository repository = mock(AccountRepository.class);
 
         Account existingAccount = new Account(
                 1,
                 "001234",
                 new BigDecimal("60000"),
-                "COP");
+                "COP",
+                3);
 
-        when(repository.findById(1))
-                .thenReturn(Optional.of(existingAccount));
+        when(service.getAccountForUser(1, "apiuser"))
+                .thenReturn(existingAccount);
 
         when(repository.update(any(Account.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        WithdrawMoneyUseCase useCase = new WithdrawMoneyUseCase(repository);
+        WithdrawMoneyUseCase useCase = new WithdrawMoneyUseCase(service, repository);
 
         Account account = useCase.execute(
                 1,
-                new BigDecimal("20000"));
+                new BigDecimal("20000"),
+                "apiuser");
 
         assertEquals(new BigDecimal("40000"), account.getBalance());
 
-        verify(repository).findById(1);
+        verify(service).getAccountForUser(1, "apiuser");
         verify(repository).update(account);
 
     }
@@ -53,22 +55,24 @@ public class WithdrawMoneyUseCaseTest {
     @Test
     void shouldThrowExceptionWhenAccountDoesNotExist() {
 
+        AccountOwnershipService service = mock(AccountOwnershipService.class);
         AccountRepository repository = mock(AccountRepository.class);
 
-        when(repository.findById(999))
-                .thenReturn(Optional.empty());
+        when(service.getAccountForUser(999, "apiuser"))
+                .thenThrow(new AccountNotFoundException(
+                        "Account not found with id: 999"));
 
-        WithdrawMoneyUseCase useCase = new WithdrawMoneyUseCase(repository);
+        WithdrawMoneyUseCase useCase = new WithdrawMoneyUseCase(service, repository);
 
         AccountNotFoundException exception = assertThrows(
                 AccountNotFoundException.class,
-                () -> useCase.execute(999, new BigDecimal("50000")));
+                () -> useCase.execute(999, new BigDecimal("50000"), "apiuser"));
 
         assertEquals(
                 "Account not found with id: 999",
                 exception.getMessage());
 
-        verify(repository).findById(999);
+        verify(service).getAccountForUser(999, "apiuser");
         verify(repository, never()).update(any(Account.class));
 
     }
@@ -76,30 +80,33 @@ public class WithdrawMoneyUseCaseTest {
     @Test
     void shouldThrowExceptionWhenBalanceIsInsufficient() {
 
+        AccountOwnershipService service = mock(AccountOwnershipService.class);
         AccountRepository repository = mock(AccountRepository.class);
 
         Account existingAccount = new Account(
                 1,
                 "001234",
                 new BigDecimal("60000"),
-                "COP");
+                "COP",
+                3);
 
-        when(repository.findById(1))
-                .thenReturn(Optional.of(existingAccount));
+        when(service.getAccountForUser(1, "apiuser"))
+                .thenReturn(existingAccount);
 
-        WithdrawMoneyUseCase useCase = new WithdrawMoneyUseCase(repository);
+        WithdrawMoneyUseCase useCase = new WithdrawMoneyUseCase(service, repository);
 
         InsufficientBalanceException exception = assertThrows(
                 InsufficientBalanceException.class,
                 () -> useCase.execute(
                         1,
-                        new BigDecimal("80000")));
+                        new BigDecimal("80000"),
+                        "apiuser"));
 
         assertEquals(
                 "Insufficient balance",
                 exception.getMessage());
 
-        verify(repository).findById(1);
+        verify(service).getAccountForUser(1, "apiuser");
         verify(repository, never()).update(any(Account.class));
     }
 
