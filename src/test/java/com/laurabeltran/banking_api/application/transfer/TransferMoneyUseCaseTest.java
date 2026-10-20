@@ -3,8 +3,7 @@ package com.laurabeltran.banking_api.application.transfer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -13,7 +12,11 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.laurabeltran.banking_api.application.account.AccountOwnershipService;
 import com.laurabeltran.banking_api.application.account.port.AccountRepository;
@@ -21,13 +24,24 @@ import com.laurabeltran.banking_api.domain.account.Account;
 import com.laurabeltran.banking_api.domain.account.AccountNotFoundException;
 import com.laurabeltran.banking_api.domain.account.InsufficientBalanceException;
 
+@ExtendWith(MockitoExtension.class)
 public class TransferMoneyUseCaseTest {
+
+    @Mock
+    private AccountOwnershipService service;
+
+    @Mock
+    private AccountRepository repository;
+
+    private TransferMoneyUseCase useCase;
+
+    @BeforeEach
+    void setUp() {
+        useCase = new TransferMoneyUseCase(service, repository);
+    }
 
     @Test
     void shouldTransferAmount() {
-
-        AccountOwnershipService service = mock(AccountOwnershipService.class);
-        AccountRepository repository = mock(AccountRepository.class);
 
         Account sourceAccount = new Account(
                 1,
@@ -49,8 +63,6 @@ public class TransferMoneyUseCaseTest {
         when(repository.findById(2))
                 .thenReturn(Optional.of(targetAccount));
 
-        TransferMoneyUseCase useCase = new TransferMoneyUseCase(service, repository);
-
         useCase.execute(
                 1,
                 2,
@@ -69,14 +81,9 @@ public class TransferMoneyUseCaseTest {
     @Test
     void shouldThrowExceptionWhenSourceAccountDoesNotExist() {
 
-        AccountOwnershipService service = mock(AccountOwnershipService.class);
-        AccountRepository repository = mock(AccountRepository.class);
-
         when(service.getAccountForUser(1, "apiuser"))
                 .thenThrow(new AccountNotFoundException(
                         "Account not found with id: 1"));
-
-        TransferMoneyUseCase useCase = new TransferMoneyUseCase(service, repository);
 
         AccountNotFoundException exception = assertThrows(
                 AccountNotFoundException.class,
@@ -98,9 +105,6 @@ public class TransferMoneyUseCaseTest {
     @Test
     void shouldThrowExceptionWhenTargetAccountDoesNotExist() {
 
-        AccountOwnershipService service = mock(AccountOwnershipService.class);
-        AccountRepository repository = mock(AccountRepository.class);
-
         Account sourceAccount = new Account(
                 1,
                 "001234",
@@ -113,8 +117,6 @@ public class TransferMoneyUseCaseTest {
 
         when(repository.findById(2))
                 .thenReturn(Optional.empty());
-
-        TransferMoneyUseCase useCase = new TransferMoneyUseCase(service, repository);
 
         AccountNotFoundException exception = assertThrows(
                 AccountNotFoundException.class,
@@ -136,9 +138,6 @@ public class TransferMoneyUseCaseTest {
     @Test
     void shouldThrowExceptionWhenSourceAccountHasInsufficientBalance() {
 
-        AccountOwnershipService service = mock(AccountOwnershipService.class);
-        AccountRepository repository = mock(AccountRepository.class);
-
         Account sourceAccount = new Account(
                 1,
                 "001234",
@@ -158,8 +157,6 @@ public class TransferMoneyUseCaseTest {
 
         when(repository.findById(2))
                 .thenReturn(Optional.of(targetAccount));
-
-        TransferMoneyUseCase useCase = new TransferMoneyUseCase(service, repository);
 
         InsufficientBalanceException exception = assertThrows(
                 InsufficientBalanceException.class,
@@ -183,10 +180,6 @@ public class TransferMoneyUseCaseTest {
 
     @Test
     void shouldRejectTransferToTheSameAccount() {
-        AccountOwnershipService service = mock(AccountOwnershipService.class);
-        AccountRepository repository = mock(AccountRepository.class);
-
-        TransferMoneyUseCase useCase = new TransferMoneyUseCase(service, repository);
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
@@ -201,8 +194,6 @@ public class TransferMoneyUseCaseTest {
 
     @Test
     void shouldRejectTransferBetweenDifferentCurrencies() {
-        AccountOwnershipService service = mock(AccountOwnershipService.class);
-        AccountRepository repository = mock(AccountRepository.class);
 
         Account sourceAccount = new Account(
                 1,
@@ -224,8 +215,6 @@ public class TransferMoneyUseCaseTest {
         when(repository.findById(2))
                 .thenReturn(Optional.of(targetAccount));
 
-        TransferMoneyUseCase useCase = new TransferMoneyUseCase(service, repository);
-
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> useCase.execute(1, 2, new BigDecimal("100"), "apiuser"));
@@ -237,13 +226,13 @@ public class TransferMoneyUseCaseTest {
         assertEquals(new BigDecimal("500.00"), sourceAccount.getBalance());
         assertEquals(new BigDecimal("200.00"), targetAccount.getBalance());
 
+        verify(service).getAccountForUser(1, "apiuser");
+        verify(repository).findById(2);
         verify(repository, never()).update(any(Account.class));
     }
 
     @Test
     void shouldPropagateExceptionWhenUpdatingTargetAccountFails() {
-        AccountOwnershipService service = mock(AccountOwnershipService.class);
-        AccountRepository repository = mock(AccountRepository.class);
 
         Account sourceAccount = new Account(
                 1,
@@ -265,10 +254,15 @@ public class TransferMoneyUseCaseTest {
         when(repository.findById(2))
                 .thenReturn(Optional.of(targetAccount));
 
-        doThrow(new RuntimeException("Database update failed"))
-                .when(repository).update(targetAccount);
+        doAnswer(invocation -> {
+            Account account = invocation.getArgument(0);
 
-        TransferMoneyUseCase useCase = new TransferMoneyUseCase(service, repository);
+            if (account == targetAccount) {
+                throw new RuntimeException("Database update failed");
+            }
+
+            return account;
+        }).when(repository).update(any(Account.class));
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
