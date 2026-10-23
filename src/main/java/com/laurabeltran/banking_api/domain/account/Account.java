@@ -8,6 +8,7 @@ public class Account {
     private String accountNumber;
     private BigDecimal balance;
     private final String currency;
+    private final Integer ownerId;
 
     public Account(int id, String accountNumber, BigDecimal balance, String currency) {
 
@@ -19,6 +20,20 @@ public class Account {
         this.accountNumber = accountNumber;
         this.balance = balance;
         this.currency = currency;
+        this.ownerId = null;
+    }
+
+    public Account(int id, String accountNumber, BigDecimal balance, String currency, Integer ownerId) {
+
+        if (balance == null || balance.compareTo(BigDecimal.ZERO) < 0) {
+            throw new InvalidAmountException("Initial balance must be zero or positive");
+        }
+
+        this.id = id;
+        this.accountNumber = accountNumber;
+        this.balance = balance;
+        this.currency = currency;
+        this.ownerId = ownerId;
     }
 
     public void deposit(BigDecimal amount) {
@@ -66,6 +81,10 @@ public class Account {
         }
 
         this.accountNumber = accountNumber;
+    }
+
+    public Integer getOwnerId() {
+        return ownerId;
     }
 
 }

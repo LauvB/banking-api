@@ -18,6 +18,7 @@ import com.laurabeltran.banking_api.domain.account.Account;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -64,9 +65,9 @@ public class AccountController {
     }
 
     @GetMapping("/{id}")
-    public AccountResponse getById(@PathVariable int id) {
+    public AccountResponse getAccount(@PathVariable int id, Authentication authentication) {
 
-        Account account = getAccountUseCase.execute(id);
+        Account account = getAccountUseCase.execute(id, authentication.getName());
 
         return AccountResponse.from(account);
 
@@ -75,11 +76,13 @@ public class AccountController {
     @PutMapping("/{id}")
     public AccountResponse update(
             @PathVariable int id,
-            @Valid @RequestBody UpdateAccountRequest request) {
+            @Valid @RequestBody UpdateAccountRequest request,
+            Authentication authentication) {
 
         Account account = updateAccountUseCase.execute(
                 id,
-                request.accountNumber());
+                request.accountNumber(),
+                authentication.getName());
 
         return AccountResponse.from(account);
     }
@@ -87,11 +90,13 @@ public class AccountController {
     @PostMapping("/{id}/deposit")
     public AccountResponse deposit(
             @PathVariable int id,
-            @Valid @RequestBody MoneyOperationRequest request) {
+            @Valid @RequestBody MoneyOperationRequest request,
+            Authentication authentication) {
 
         Account account = depositMoneyUseCase.execute(
                 id,
-                request.amount());
+                request.amount(),
+                authentication.getName());
 
         return AccountResponse.from(account);
     }
@@ -99,11 +104,13 @@ public class AccountController {
     @PostMapping("/{id}/withdraw")
     public AccountResponse withdraw(
             @PathVariable int id,
-            @Valid @RequestBody MoneyOperationRequest request) {
+            @Valid @RequestBody MoneyOperationRequest request,
+            Authentication authentication) {
 
         Account account = withdrawMoneyUseCase.execute(
                 id,
-                request.amount());
+                request.amount(),
+                authentication.getName());
 
         return AccountResponse.from(account);
     }

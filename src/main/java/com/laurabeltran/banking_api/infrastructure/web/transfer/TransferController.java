@@ -1,5 +1,6 @@
 package com.laurabeltran.banking_api.infrastructure.web.transfer;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,12 +25,14 @@ public class TransferController {
 
     @PostMapping
     public TransferResponse transfer(
-            @Valid @RequestBody TransferMoneyRequest request) {
+            @Valid @RequestBody TransferMoneyRequest request,
+            Authentication authentication) {
 
         TransferResult result = transferMoneyUseCase.execute(
                 request.sourceAccountId(),
                 request.targetAccountId(),
-                request.amount());
+                request.amount(),
+                authentication.getName());
 
         return new TransferResponse(
                 result.sourceAccountId(),

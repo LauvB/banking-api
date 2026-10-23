@@ -7,62 +7,61 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
-import com.laurabeltran.banking_api.application.account.port.AccountRepository;
 import com.laurabeltran.banking_api.domain.account.Account;
 import com.laurabeltran.banking_api.domain.account.AccountNotFoundException;
 
 public class GetAccountUseCaseTest {
 
-    @Test
-    void shouldGetAccountById() {
+        @Test
+        void shouldGetAccountById() {
 
-        AccountRepository repository = mock(AccountRepository.class);
+                AccountOwnershipService accountOwnershipService = mock(AccountOwnershipService.class);
 
-        Account expectedAccount = new Account(
-                1,
-                "001234",
-                new BigDecimal("10000"),
-                "COP");
+                Account expectedAccount = new Account(
+                                1,
+                                "001234",
+                                new BigDecimal("10000"),
+                                "COP",
+                                3);
 
-        when(repository.findById(1))
-                .thenReturn(Optional.of(expectedAccount));
+                when(accountOwnershipService.getAccountForUser(1, "apiuser"))
+                                .thenReturn(expectedAccount);
 
-        GetAccountUseCase useCase = new GetAccountUseCase(repository);
+                GetAccountUseCase useCase = new GetAccountUseCase(accountOwnershipService);
 
-        Account account = useCase.execute(1);
+                Account account = useCase.execute(1, "apiuser");
 
-        assertEquals(1, account.getId());
-        assertEquals("001234", account.getAccountNumber());
-        assertEquals(new BigDecimal("10000"), account.getBalance());
-        assertEquals("COP", account.getCurrency());
+                assertEquals(1, account.getId());
+                assertEquals("001234", account.getAccountNumber());
+                assertEquals(new BigDecimal("10000"), account.getBalance());
+                assertEquals("COP", account.getCurrency());
 
-        verify(repository).findById(1);
-    }
+                verify(accountOwnershipService).getAccountForUser(1, "apiuser");
+        }
 
-    @Test
-    void shouldThrowExceptionWhenAccountDoesNotExist() {
+        @Test
+        void shouldThrowExceptionWhenAccountDoesNotExist() {
 
-        AccountRepository repository = mock(AccountRepository.class);
+                AccountOwnershipService accountOwnershipService = mock(AccountOwnershipService.class);
 
-        when(repository.findById(999))
-                .thenReturn(Optional.empty());
+                when(accountOwnershipService.getAccountForUser(999, "apiuser"))
+                                .thenThrow(new AccountNotFoundException("Account not found with id: 999"));
 
-        GetAccountUseCase useCase = new GetAccountUseCase(repository);
+                GetAccountUseCase useCase = new GetAccountUseCase(accountOwnershipService);
 
-        AccountNotFoundException exception = assertThrows(
-                AccountNotFoundException.class,
-                () -> useCase.execute(999));
+                AccountNotFoundException exception = assertThrows(
+                                AccountNotFoundException.class,
+                                () -> useCase.execute(999, "apiuser"));
 
-        assertEquals(
-                "Account not found with id: 999",
-                exception.getMessage());
+                assertEquals(
+                                "Account not found with id: 999",
+                                exception.getMessage());
 
-        verify(repository).findById(999);
+                verify(accountOwnershipService).getAccountForUser(999, "apiuser");
 
-    }
+        }
 
 }
