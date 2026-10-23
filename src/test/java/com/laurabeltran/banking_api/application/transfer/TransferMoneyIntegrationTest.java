@@ -22,12 +22,16 @@ public class TransferMoneyIntegrationTest {
 
     private static final int SOURCE_ACCOUNT_ID = 9001;
     private static final int TARGET_ACCOUNT_ID = 9002;
-    private static final String USERNAME = "transfer-rollback-test";
+    private static final String USERNAME = "transfer-integration-test";
+
+    private static final BigDecimal SOURCE_INITIAL_BALANCE = new BigDecimal("100000.00");
+    private static final BigDecimal TARGET_INITIAL_BALANCE = new BigDecimal("50000.00");
+    private static final BigDecimal TRANSFER_AMOUNT = new BigDecimal("20000.00");
 
     @SuppressWarnings({ "deprecation", "resource" })
     @Container
     static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("baking-test")
+            .withDatabaseName("banking-test")
             .withUsername("test")
             .withPassword("test");
 
@@ -48,6 +52,21 @@ public class TransferMoneyIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.execute("""
+                DROP TRIGGER IF EXISTS fail_target_account_update_trigger
+                ON accounts
+                """);
+
+        jdbcTemplate.execute("DROP FUNCTION IF EXISTS fail_target_account_update()");
+
+        jdbcTemplate.update(
+                "DELETE FROM accounts WHERE id IN (?, ?)",
+                SOURCE_ACCOUNT_ID, TARGET_ACCOUNT_ID);
+
+        jdbcTemplate.update(
+                "DELETE FROM users WHERE username = ?",
+                USERNAME);
+
         jdbcTemplate.update(
                 "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
                 USERNAME, "not-a-real-password", "ROLE_USER");
@@ -62,15 +81,47 @@ public class TransferMoneyIntegrationTest {
                 VALUES (?, ?, ?, ?, ?)
                 """,
                 SOURCE_ACCOUNT_ID, "TEST-9001",
-                new BigDecimal("100000.00"), "COP", userId);
+                SOURCE_INITIAL_BALANCE, "COP", userId);
 
         jdbcTemplate.update("""
                 INSERT INTO accounts (id, account_number, balance, currency, user_id)
                 VALUES (?, ?, ?, ?, ?)
                 """,
                 TARGET_ACCOUNT_ID, "TEST-9002",
-                new BigDecimal("50000.00"), "COP", userId);
+                TARGET_INITIAL_BALANCE, "COP", userId);
+    }
 
+    @Test
+    void shouldPersistBothAccountBalancesWhenTransferSucceeds() {
+        TransferResult result = transferMoneyUseCase.execute(
+                SOURCE_ACCOUNT_ID,
+                TARGET_ACCOUNT_ID,
+                TRANSFER_AMOUNT,
+                USERNAME);
+
+        assertThat(result.sourceBalance()).isEqualByComparingTo("80000.00");
+        assertThat(result.targetBalance()).isEqualByComparingTo("70000.00");
+
+        assertPersistedBalance(SOURCE_ACCOUNT_ID, "80000.00");
+        assertPersistedBalance(TARGET_ACCOUNT_ID, "70000.00");
+    }
+
+    @Test
+    void shouldRollbackBothAccountsWhenTargetUpdateFails() {
+        createFailingTargetUpdateTrigger();
+
+        assertThatThrownBy(() -> transferMoneyUseCase.execute(
+                SOURCE_ACCOUNT_ID,
+                TARGET_ACCOUNT_ID,
+                TRANSFER_AMOUNT,
+                USERNAME))
+                .hasStackTraceContaining("Simulated failure updating target account");
+
+        assertPersistedBalance(SOURCE_ACCOUNT_ID, "100000.00");
+        assertPersistedBalance(TARGET_ACCOUNT_ID, "50000.00");
+    }
+
+    private void createFailingTargetUpdateTrigger() {
         jdbcTemplate.execute("""
                 CREATE OR REPLACE FUNCTION fail_target_account_update()
                 RETURNS TRIGGER AS $$
@@ -91,27 +142,13 @@ public class TransferMoneyIntegrationTest {
                 """);
     }
 
-    @Test
-    void shouldRollbackBothAccountsWhenTargetUpdateFails() {
-        assertThatThrownBy(() -> transferMoneyUseCase.execute(
-                SOURCE_ACCOUNT_ID,
-                TARGET_ACCOUNT_ID,
-                new BigDecimal("20000.00"),
-                USERNAME))
-                .hasStackTraceContaining("Simulated failure updating target account");
-
-        BigDecimal sourceBalance = jdbcTemplate.queryForObject(
+    private void assertPersistedBalance(int accountId, String expectedBalance) {
+        BigDecimal balance = jdbcTemplate.queryForObject(
                 "SELECT balance FROM accounts WHERE id = ?",
                 BigDecimal.class,
-                SOURCE_ACCOUNT_ID);
+                accountId);
 
-        BigDecimal targetBalance = jdbcTemplate.queryForObject(
-                "SELECT balance FROM accounts WHERE id = ?",
-                BigDecimal.class,
-                TARGET_ACCOUNT_ID);
-
-        assertThat(sourceBalance).isEqualByComparingTo("100000.00");
-        assertThat(targetBalance).isEqualByComparingTo("50000.00");
+        assertThat(balance).isEqualByComparingTo(expectedBalance);
     }
 
 }
