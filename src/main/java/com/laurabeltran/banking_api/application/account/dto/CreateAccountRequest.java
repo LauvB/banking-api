@@ -8,7 +8,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 public record CreateAccountRequest(
 
-        @NotNull Integer id,
+        @NotBlank String username,
 
         @NotBlank String accountNumber,
 
