@@ -55,7 +55,7 @@ public class AccountController {
             @Valid @RequestBody CreateAccountRequest request) {
 
         Account account = createAccountUseCase.execute(
-                request.id(),
+                request.username(),
                 request.accountNumber(),
                 request.balance(),
                 request.currency());

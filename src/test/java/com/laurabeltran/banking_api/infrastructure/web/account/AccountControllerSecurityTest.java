@@ -90,8 +90,17 @@ public class AccountControllerSecurityTest {
                 .with(csrf())
                 .header(HttpHeaders.AUTHORIZATION, "Basic " + credentials)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
+                .content("""
+                        {
+                            "username": "apiuser",
+                            "accountNumber": "001234",
+                            "balance": 10000,
+                            "currency": "COP"
+                        }
+                        """))
                 .andExpect(status().isForbidden());
+
+        verify(accountRepository, never()).save(any(Account.class));
     }
 
     @Test
@@ -99,13 +108,41 @@ public class AccountControllerSecurityTest {
         String credentials = Base64.getEncoder().encodeToString(
                 "admin:AdminPass123!".getBytes(StandardCharsets.UTF_8));
 
+        when(userIdentityRepository.findIdByUsername("apiuser"))
+                .thenReturn(Optional.of(3));
+
+        when(accountRepository.save(any(Account.class)))
+                .thenAnswer(invocation -> {
+                    Account account = invocation.getArgument(0);
+
+                    return new Account(
+                            42,
+                            account.getAccountNumber(),
+                            account.getBalance(),
+                            account.getCurrency(),
+                            account.getOwnerId());
+                });
+
         mockMvc.perform(post("/accounts")
                 .with(csrf())
                 .header(HttpHeaders.AUTHORIZATION, "Basic " + credentials)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
-                .andExpect(status().isBadRequest());
+                .content("""
+                        {
+                            "username": "apiuser",
+                            "accountNumber": "001234",
+                            "balance": 10000,
+                            "currency": "COP"
+                        }
+                        """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(42))
+                .andExpect(jsonPath("$.accountNumber").value("001234"))
+                .andExpect(jsonPath("$.balance").value(10000))
+                .andExpect(jsonPath("$.currency").value("COP"));
+
+        verify(userIdentityRepository).findIdByUsername("apiuser");
+        verify(accountRepository).save(any(Account.class));
     }
 
     @Test
