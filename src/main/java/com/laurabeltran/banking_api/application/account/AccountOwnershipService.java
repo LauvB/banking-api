@@ -22,7 +22,7 @@ public class AccountOwnershipService {
     public Account getAccountForUser(int accountId, String username) {
 
         Integer userId = userIdentityRepository.findIdByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("Authenticated user not found"));
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
 
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new AccountNotFoundException(

@@ -50,7 +50,7 @@ public class PostgreSQLAccountRepository implements AccountRepository {
 
         if (account.getOwnerId() != null) {
             UserEntity owner = jpaUserRepository.findById(account.getOwnerId())
-                    .orElseThrow(() -> new IllegalArgumentException(
+                    .orElseThrow(() -> new IllegalStateException(
                             "Owner not found: " + account.getOwnerId()));
 
             entity.setOwner(owner);
