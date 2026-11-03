@@ -18,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 import com.laurabeltran.banking_api.application.account.port.AccountRepository;
 import com.laurabeltran.banking_api.application.user.port.UserIdentityRepository;
 import com.laurabeltran.banking_api.domain.account.Account;
+import com.laurabeltran.banking_api.domain.account.CustomerNotFoundException;
 
 public class CreateAccountUseCaseTest {
 
@@ -73,7 +74,7 @@ public class CreateAccountUseCaseTest {
                 userIdentityRepository);
 
         assertThrows(
-                IllegalArgumentException.class,
+                CustomerNotFoundException.class,
                 () -> useCase.execute(
                         "unknown",
                         "001234",

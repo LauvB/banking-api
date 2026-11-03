@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.laurabeltran.banking_api.domain.account.AccountAccessDeniedException;
 import com.laurabeltran.banking_api.domain.account.AccountNotFoundException;
+import com.laurabeltran.banking_api.domain.account.CustomerNotFoundException;
 import com.laurabeltran.banking_api.domain.account.InsufficientBalanceException;
 import com.laurabeltran.banking_api.domain.account.InvalidAmountException;
 
@@ -83,6 +84,17 @@ public class GlobalExceptionHandler {
 
         return new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
+                exception.getMessage(),
+                null);
+    }
+
+    @ExceptionHandler(CustomerNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleCustomerNotFound(
+            CustomerNotFoundException exception) {
+
+        return new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
                 exception.getMessage(),
                 null);
     }

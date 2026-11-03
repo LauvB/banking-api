@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.laurabeltran.banking_api.application.account.port.AccountRepository;
 import com.laurabeltran.banking_api.application.user.port.UserIdentityRepository;
 import com.laurabeltran.banking_api.domain.account.Account;
+import com.laurabeltran.banking_api.domain.account.CustomerNotFoundException;
 
 @Service
 public class CreateAccountUseCase {
@@ -22,7 +23,7 @@ public class CreateAccountUseCase {
     public Account execute(String username, String accountNumber, BigDecimal balance, String currency) {
 
         Integer ownerId = userIdentityRepository.findIdByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + username));
+                .orElseThrow(() -> new CustomerNotFoundException("Customer not found: " + username));
 
         Account account = new Account(
                 null,
