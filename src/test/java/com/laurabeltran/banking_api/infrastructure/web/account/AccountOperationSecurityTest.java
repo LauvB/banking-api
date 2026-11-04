@@ -58,7 +58,7 @@ public class AccountOperationSecurityTest {
         when(userIdentityRepository.findIdByUsername("apiuser"))
                 .thenReturn(Optional.of(3));
 
-        when(accountRepository.findById(1))
+        when(accountRepository.findByIdForUpdate(1))
                 .thenReturn(Optional.of(account));
 
         when(accountRepository.update(any(Account.class)))
@@ -89,7 +89,7 @@ public class AccountOperationSecurityTest {
         when(userIdentityRepository.findIdByUsername("apiuser"))
                 .thenReturn(Optional.of(3));
 
-        when(accountRepository.findById(2))
+        when(accountRepository.findByIdForUpdate(2))
                 .thenReturn(Optional.of(anotherUsersAccount));
 
         mockMvc.perform(post("/accounts/2/deposit")
@@ -103,7 +103,7 @@ public class AccountOperationSecurityTest {
                 .andExpect(jsonPath("$.status").value(403));
 
         verify(userIdentityRepository).findIdByUsername("apiuser");
-        verify(accountRepository).findById(2);
+        verify(accountRepository).findByIdForUpdate(2);
         verify(accountRepository, never()).update(any(Account.class));
 
     }
@@ -120,7 +120,7 @@ public class AccountOperationSecurityTest {
         when(userIdentityRepository.findIdByUsername("apiuser"))
                 .thenReturn(Optional.of(3));
 
-        when(accountRepository.findById(1))
+        when(accountRepository.findByIdForUpdate(1))
                 .thenReturn(Optional.of(account));
 
         when(accountRepository.update(any(Account.class)))
@@ -151,7 +151,7 @@ public class AccountOperationSecurityTest {
         when(userIdentityRepository.findIdByUsername("apiuser"))
                 .thenReturn(Optional.of(3));
 
-        when(accountRepository.findById(2))
+        when(accountRepository.findByIdForUpdate(2))
                 .thenReturn(Optional.of(anotherUsersAccount));
 
         mockMvc.perform(post("/accounts/2/withdraw")
@@ -165,7 +165,7 @@ public class AccountOperationSecurityTest {
                 .andExpect(jsonPath("$.status").value(403));
 
         verify(userIdentityRepository).findIdByUsername("apiuser");
-        verify(accountRepository).findById(2);
+        verify(accountRepository).findByIdForUpdate(2);
         verify(accountRepository, never()).update(any(Account.class));
 
     }

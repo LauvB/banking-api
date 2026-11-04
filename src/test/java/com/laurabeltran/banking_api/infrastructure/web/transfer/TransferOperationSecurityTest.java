@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.laurabeltran.banking_api.application.account.port.AccountOwnership;
 import com.laurabeltran.banking_api.application.account.port.AccountRepository;
 import com.laurabeltran.banking_api.application.user.port.UserIdentityRepository;
 import com.laurabeltran.banking_api.domain.account.Account;
@@ -66,10 +67,13 @@ public class TransferOperationSecurityTest {
         when(userIdentityRepository.findIdByUsername("apiuser"))
                 .thenReturn(Optional.of(3));
 
-        when(accountRepository.findById(1))
+        when(accountRepository.findOwnershipById(1))
+                .thenReturn(Optional.of(new AccountOwnership(3)));
+
+        when(accountRepository.findByIdForUpdate(1))
                 .thenReturn(Optional.of(sourceAccount));
 
-        when(accountRepository.findById(2))
+        when(accountRepository.findByIdForUpdate(2))
                 .thenReturn(Optional.of(targetAccount));
 
         when(accountRepository.update(any(Account.class)))
@@ -94,7 +98,7 @@ public class TransferOperationSecurityTest {
 
     @Test
     void shouldForbidTransferFromAnotherUsersAccount() throws Exception {
-        Account anotherUserAccount = new Account(
+        new Account(
                 1,
                 "ACC-001",
                 new BigDecimal("500"),
@@ -104,8 +108,8 @@ public class TransferOperationSecurityTest {
         when(userIdentityRepository.findIdByUsername("apiuser"))
                 .thenReturn(Optional.of(3));
 
-        when(accountRepository.findById(1))
-                .thenReturn(Optional.of(anotherUserAccount));
+        when(accountRepository.findOwnershipById(1))
+                .thenReturn(Optional.of(new AccountOwnership(7)));
 
         mockMvc.perform(post("/transfers")
                 .with(csrf())
@@ -121,6 +125,9 @@ public class TransferOperationSecurityTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403));
 
+        verify(accountRepository).findOwnershipById(1);
+        verify(accountRepository, never()).findByIdForUpdate(1);
+        verify(accountRepository, never()).findByIdForUpdate(2);
         verify(accountRepository, never()).update(any(Account.class));
     }
 
@@ -162,10 +169,13 @@ public class TransferOperationSecurityTest {
         when(userIdentityRepository.findIdByUsername("apiuser"))
                 .thenReturn(Optional.of(3));
 
-        when(accountRepository.findById(1))
+        when(accountRepository.findOwnershipById(1))
+                .thenReturn(Optional.of(new AccountOwnership(3)));
+
+        when(accountRepository.findByIdForUpdate(1))
                 .thenReturn(Optional.of(sourceAccount));
 
-        when(accountRepository.findById(2))
+        when(accountRepository.findByIdForUpdate(2))
                 .thenReturn(Optional.of(targetAccount));
 
         mockMvc.perform(post("/transfers")

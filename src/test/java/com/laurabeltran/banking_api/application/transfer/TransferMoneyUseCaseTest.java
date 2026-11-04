@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.laurabeltran.banking_api.application.account.AccountOwnershipService;
 import com.laurabeltran.banking_api.application.account.port.AccountRepository;
 import com.laurabeltran.banking_api.domain.account.Account;
+import com.laurabeltran.banking_api.domain.account.AccountAccessDeniedException;
 import com.laurabeltran.banking_api.domain.account.AccountNotFoundException;
 import com.laurabeltran.banking_api.domain.account.InsufficientBalanceException;
 
@@ -57,10 +59,10 @@ public class TransferMoneyUseCaseTest {
                 "COP",
                 7);
 
-        when(service.getAccountForUser(1, "apiuser"))
-                .thenReturn(sourceAccount);
+        when(repository.findByIdForUpdate(1))
+                .thenReturn(Optional.of(sourceAccount));
 
-        when(repository.findById(2))
+        when(repository.findByIdForUpdate(2))
                 .thenReturn(Optional.of(targetAccount));
 
         useCase.execute(
@@ -72,8 +74,9 @@ public class TransferMoneyUseCaseTest {
         assertEquals(new BigDecimal("40000"), sourceAccount.getBalance());
         assertEquals(new BigDecimal("40000"), targetAccount.getBalance());
 
-        verify(service).getAccountForUser(1, "apiuser");
-        verify(repository).findById(2);
+        verify(service).validateAccountOwnershipById(1, "apiuser");
+        verify(repository).findByIdForUpdate(1);
+        verify(repository).findByIdForUpdate(2);
         verify(repository).update(sourceAccount);
         verify(repository).update(targetAccount);
     }
@@ -81,9 +84,10 @@ public class TransferMoneyUseCaseTest {
     @Test
     void shouldThrowExceptionWhenSourceAccountDoesNotExist() {
 
-        when(service.getAccountForUser(1, "apiuser"))
-                .thenThrow(new AccountNotFoundException(
-                        "Account not found with id: 1"));
+        doThrow(new AccountNotFoundException(
+                "Account not found with id: 1"))
+                .when(service)
+                .validateAccountOwnershipById(1, "apiuser");
 
         AccountNotFoundException exception = assertThrows(
                 AccountNotFoundException.class,
@@ -97,8 +101,35 @@ public class TransferMoneyUseCaseTest {
                 "Account not found with id: 1",
                 exception.getMessage());
 
-        verify(service).getAccountForUser(1, "apiuser");
-        verify(repository, never()).findById(2);
+        verify(service).validateAccountOwnershipById(1, "apiuser");
+        verify(repository, never()).findByIdForUpdate(1);
+        verify(repository, never()).findByIdForUpdate(2);
+        verify(repository, never()).update(any(Account.class));
+    }
+
+    @Test
+    void shouldRejectTransferWhenUserDoesNotOwnSourceAccount() {
+
+        doThrow(new AccountAccessDeniedException(
+                "You do not have access to this account"))
+                .when(service)
+                .validateAccountOwnershipById(1, "apiuser");
+
+        AccountAccessDeniedException exception = assertThrows(
+                AccountAccessDeniedException.class,
+                () -> useCase.execute(
+                        1,
+                        2,
+                        new BigDecimal("20000"),
+                        "apiuser"));
+
+        assertEquals(
+                "You do not have access to this account",
+                exception.getMessage());
+
+        verify(service).validateAccountOwnershipById(1, "apiuser");
+        verify(repository, never()).findByIdForUpdate(1);
+        verify(repository, never()).findByIdForUpdate(2);
         verify(repository, never()).update(any(Account.class));
     }
 
@@ -112,10 +143,10 @@ public class TransferMoneyUseCaseTest {
                 "COP",
                 3);
 
-        when(service.getAccountForUser(1, "apiuser"))
-                .thenReturn(sourceAccount);
+        when(repository.findByIdForUpdate(1))
+                .thenReturn(Optional.of(sourceAccount));
 
-        when(repository.findById(2))
+        when(repository.findByIdForUpdate(2))
                 .thenReturn(Optional.empty());
 
         AccountNotFoundException exception = assertThrows(
@@ -130,8 +161,9 @@ public class TransferMoneyUseCaseTest {
                 "Account not found with id: 2",
                 exception.getMessage());
 
-        verify(service).getAccountForUser(1, "apiuser");
-        verify(repository).findById(2);
+        verify(service).validateAccountOwnershipById(1, "apiuser");
+        verify(repository).findByIdForUpdate(1);
+        verify(repository).findByIdForUpdate(2);
         verify(repository, never()).update(any(Account.class));
     }
 
@@ -152,10 +184,10 @@ public class TransferMoneyUseCaseTest {
                 "COP",
                 7);
 
-        when(service.getAccountForUser(1, "apiuser"))
-                .thenReturn(sourceAccount);
+        when(repository.findByIdForUpdate(1))
+                .thenReturn(Optional.of(sourceAccount));
 
-        when(repository.findById(2))
+        when(repository.findByIdForUpdate(2))
                 .thenReturn(Optional.of(targetAccount));
 
         InsufficientBalanceException exception = assertThrows(
@@ -173,8 +205,9 @@ public class TransferMoneyUseCaseTest {
         assertEquals(new BigDecimal("20000"), sourceAccount.getBalance());
         assertEquals(new BigDecimal("30000"), targetAccount.getBalance());
 
-        verify(service).getAccountForUser(1, "apiuser");
-        verify(repository).findById(2);
+        verify(service).validateAccountOwnershipById(1, "apiuser");
+        verify(repository).findByIdForUpdate(1);
+        verify(repository).findByIdForUpdate(2);
         verify(repository, never()).update(any(Account.class));
     }
 
@@ -209,10 +242,10 @@ public class TransferMoneyUseCaseTest {
                 "USD",
                 7);
 
-        when(service.getAccountForUser(1, "apiuser"))
-                .thenReturn(sourceAccount);
+        when(repository.findByIdForUpdate(1))
+                .thenReturn(Optional.of(sourceAccount));
 
-        when(repository.findById(2))
+        when(repository.findByIdForUpdate(2))
                 .thenReturn(Optional.of(targetAccount));
 
         IllegalArgumentException exception = assertThrows(
@@ -226,8 +259,9 @@ public class TransferMoneyUseCaseTest {
         assertEquals(new BigDecimal("500.00"), sourceAccount.getBalance());
         assertEquals(new BigDecimal("200.00"), targetAccount.getBalance());
 
-        verify(service).getAccountForUser(1, "apiuser");
-        verify(repository).findById(2);
+        verify(service).validateAccountOwnershipById(1, "apiuser");
+        verify(repository).findByIdForUpdate(1);
+        verify(repository).findByIdForUpdate(2);
         verify(repository, never()).update(any(Account.class));
     }
 
@@ -248,10 +282,10 @@ public class TransferMoneyUseCaseTest {
                 "COP",
                 7);
 
-        when(service.getAccountForUser(1, "apiuser"))
-                .thenReturn(sourceAccount);
+        when(repository.findByIdForUpdate(1))
+                .thenReturn(Optional.of(sourceAccount));
 
-        when(repository.findById(2))
+        when(repository.findByIdForUpdate(2))
                 .thenReturn(Optional.of(targetAccount));
 
         doAnswer(invocation -> {

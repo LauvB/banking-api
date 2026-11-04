@@ -28,10 +28,21 @@ public class TransferMoneyUseCase {
             throw new IllegalArgumentException("Source and target accounts must be different");
         }
 
-        Account sourceAccount = accountOwnershipService.getAccountForUser(sourceAccountId, username);
+        accountOwnershipService.validateAccountOwnershipById(sourceAccountId, username);
 
-        Account targetAccount = accountRepository.findById(targetAccountId)
-                .orElseThrow(() -> new AccountNotFoundException("Account not found with id: " + targetAccountId));
+        int firstAccountId = Math.min(sourceAccountId, targetAccountId);
+        int secondAccountId = Math.max(sourceAccountId, targetAccountId);
+
+        Account firstAccount = accountRepository.findByIdForUpdate(firstAccountId)
+                .orElseThrow(() -> new AccountNotFoundException(
+                        "Account not found with id: " + firstAccountId));
+
+        Account secondAccount = accountRepository.findByIdForUpdate(secondAccountId)
+                .orElseThrow(() -> new AccountNotFoundException(
+                        "Account not found with id: " + secondAccountId));
+
+        Account sourceAccount = sourceAccountId == firstAccountId ? firstAccount : secondAccount;
+        Account targetAccount = targetAccountId == firstAccountId ? firstAccount : secondAccount;
 
         if (!sourceAccount.getCurrency().equals(targetAccount.getCurrency())) {
             throw new IllegalArgumentException("Source and target accounts must use the same currency");

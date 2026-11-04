@@ -32,7 +32,7 @@ public class WithdrawMoneyUseCaseTest {
                 "COP",
                 3);
 
-        when(service.getAccountForUser(1, "apiuser"))
+        when(service.getAccountForUserForUpdate(1, "apiuser"))
                 .thenReturn(existingAccount);
 
         when(repository.update(any(Account.class)))
@@ -47,7 +47,7 @@ public class WithdrawMoneyUseCaseTest {
 
         assertEquals(new BigDecimal("40000"), account.getBalance());
 
-        verify(service).getAccountForUser(1, "apiuser");
+        verify(service).getAccountForUserForUpdate(1, "apiuser");
         verify(repository).update(account);
 
     }
@@ -58,7 +58,7 @@ public class WithdrawMoneyUseCaseTest {
         AccountOwnershipService service = mock(AccountOwnershipService.class);
         AccountRepository repository = mock(AccountRepository.class);
 
-        when(service.getAccountForUser(999, "apiuser"))
+        when(service.getAccountForUserForUpdate(999, "apiuser"))
                 .thenThrow(new AccountNotFoundException(
                         "Account not found with id: 999"));
 
@@ -72,7 +72,7 @@ public class WithdrawMoneyUseCaseTest {
                 "Account not found with id: 999",
                 exception.getMessage());
 
-        verify(service).getAccountForUser(999, "apiuser");
+        verify(service).getAccountForUserForUpdate(999, "apiuser");
         verify(repository, never()).update(any(Account.class));
 
     }
@@ -90,7 +90,7 @@ public class WithdrawMoneyUseCaseTest {
                 "COP",
                 3);
 
-        when(service.getAccountForUser(1, "apiuser"))
+        when(service.getAccountForUserForUpdate(1, "apiuser"))
                 .thenReturn(existingAccount);
 
         WithdrawMoneyUseCase useCase = new WithdrawMoneyUseCase(service, repository);
@@ -106,7 +106,7 @@ public class WithdrawMoneyUseCaseTest {
                 "Insufficient balance",
                 exception.getMessage());
 
-        verify(service).getAccountForUser(1, "apiuser");
+        verify(service).getAccountForUserForUpdate(1, "apiuser");
         verify(repository, never()).update(any(Account.class));
     }
 

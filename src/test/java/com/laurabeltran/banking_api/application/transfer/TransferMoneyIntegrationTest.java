@@ -4,6 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +21,9 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+
+import com.laurabeltran.banking_api.application.account.WithdrawMoneyUseCase;
+import com.laurabeltran.banking_api.domain.account.InsufficientBalanceException;
 
 @SpringBootTest
 @Testcontainers
@@ -46,6 +55,9 @@ public class TransferMoneyIntegrationTest {
 
     @Autowired
     private TransferMoneyUseCase transferMoneyUseCase;
+
+    @Autowired
+    private WithdrawMoneyUseCase withdrawMoneyUseCase;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -149,6 +161,119 @@ public class TransferMoneyIntegrationTest {
                 accountId);
 
         assertThat(balance).isEqualByComparingTo(expectedBalance);
+    }
+
+    @Test
+    void shouldPreventConcurrentWithdrawalsFromOverdrawingAccount() throws Exception {
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try {
+            java.util.concurrent.Callable<?> withdrawal = () -> {
+                ready.countDown();
+
+                if (!start.await(5, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Could not start concurrent withdrawal");
+                }
+
+                return withdrawMoneyUseCase.execute(
+                        SOURCE_ACCOUNT_ID,
+                        new BigDecimal("80000.00"),
+                        USERNAME);
+            };
+
+            Future<?> firstWithdrawal = executor.submit(withdrawal);
+            Future<?> secondWithdrawal = executor.submit(withdrawal);
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+
+            start.countDown();
+
+            int successfulWithdrawals = 0;
+            int rejectedWithdrawals = 0;
+
+            for (Future<?> future : new Future<?>[] { firstWithdrawal, secondWithdrawal }) {
+                try {
+                    future.get(10, TimeUnit.SECONDS);
+                    successfulWithdrawals++;
+                } catch (ExecutionException exception) {
+                    assertThat(exception.getCause())
+                            .isInstanceOf(InsufficientBalanceException.class);
+
+                    rejectedWithdrawals++;
+                }
+            }
+
+            assertThat(successfulWithdrawals).isEqualTo(1);
+            assertThat(rejectedWithdrawals).isEqualTo(1);
+
+            assertPersistedBalance(SOURCE_ACCOUNT_ID, "20000.00");
+            assertPersistedBalance(TARGET_ACCOUNT_ID, "50000.00");
+
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void shouldCompleteConcurrentTransfersInOppositeDirectionsWithoutDeadlock()
+            throws Exception {
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try {
+            java.util.concurrent.Callable<TransferResult> transferA = () -> {
+                ready.countDown();
+
+                if (!start.await(5, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Could not start concurrent transfers");
+                }
+
+                return transferMoneyUseCase.execute(
+                        SOURCE_ACCOUNT_ID,
+                        TARGET_ACCOUNT_ID,
+                        new BigDecimal("20000.00"),
+                        USERNAME);
+            };
+
+            java.util.concurrent.Callable<TransferResult> transferB = () -> {
+                ready.countDown();
+
+                if (!start.await(5, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Could not start concurrent transfers");
+                }
+
+                return transferMoneyUseCase.execute(
+                        TARGET_ACCOUNT_ID,
+                        SOURCE_ACCOUNT_ID,
+                        new BigDecimal("10000.00"),
+                        USERNAME);
+            };
+
+            Future<TransferResult> firstTransfer = executor.submit(transferA);
+            Future<TransferResult> secondTransfer = executor.submit(transferB);
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+
+            start.countDown();
+
+            firstTransfer.get(10, TimeUnit.SECONDS);
+            secondTransfer.get(10, TimeUnit.SECONDS);
+
+            assertPersistedBalance(SOURCE_ACCOUNT_ID, "90000.00");
+            assertPersistedBalance(TARGET_ACCOUNT_ID, "60000.00");
+
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
     }
 
 }

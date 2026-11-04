@@ -3,6 +3,7 @@ package com.laurabeltran.banking_api.application.account;
 import java.math.BigDecimal;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.laurabeltran.banking_api.application.account.port.AccountRepository;
 import com.laurabeltran.banking_api.domain.account.Account;
@@ -18,8 +19,9 @@ public class DepositMoneyUseCase {
         this.accountRepository = accountRepository;
     }
 
+    @Transactional
     public Account execute(int id, BigDecimal amount, String username) {
-        Account account = accountOwnershipService.getAccountForUser(id, username);
+        Account account = accountOwnershipService.getAccountForUserForUpdate(id, username);
 
         account.deposit(amount);
 

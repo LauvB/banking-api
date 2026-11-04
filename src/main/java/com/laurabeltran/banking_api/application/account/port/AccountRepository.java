@@ -10,6 +10,10 @@ public interface AccountRepository {
 
     Optional<Account> findById(int id);
 
+    Optional<Account> findByIdForUpdate(int id);
+
+    Optional<AccountOwnership> findOwnershipById(int accountId);
+
     Account update(Account account);
 
 }

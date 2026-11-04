@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
 
+import com.laurabeltran.banking_api.application.account.port.AccountOwnership;
 import com.laurabeltran.banking_api.application.account.port.AccountRepository;
 import com.laurabeltran.banking_api.domain.account.Account;
 import com.laurabeltran.banking_api.infrastructure.persistence.user.JpaUserRepository;
@@ -35,10 +36,22 @@ public class PostgreSQLAccountRepository implements AccountRepository {
     }
 
     @Override
+    public Optional<Account> findByIdForUpdate(int id) {
+        return jpaAccountRepository.findByIdForUpdate(id)
+                .map(this::toDomain);
+    }
+
+    @Override
     public Account update(Account account) {
         AccountEntity entity = toEntity(account);
         AccountEntity updatedEntity = jpaAccountRepository.save(entity);
         return toDomain(updatedEntity);
+    }
+
+    @Override
+    public Optional<AccountOwnership> findOwnershipById(int accountId) {
+        return jpaAccountRepository.findOwnershipById(accountId)
+                .map(projection -> new AccountOwnership(projection.getOwnerId()));
     }
 
     private AccountEntity toEntity(Account account) {
