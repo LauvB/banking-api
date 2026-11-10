@@ -41,7 +41,8 @@ public class GlobalExceptionHandler {
                 .stream()
                 .collect(Collectors.toMap(
                         error -> error.getField(),
-                        error -> error.getDefaultMessage()));
+                        error -> error.getDefaultMessage(),
+                        (firstError, secondError) -> firstError));
 
         return new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
