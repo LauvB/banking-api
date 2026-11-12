@@ -110,4 +110,48 @@ public class AccountTest {
                 () -> account.withdraw(new BigDecimal("-500")));
     }
 
+    @Test
+    void shouldNotCreateAccountWithNullAccountNumber() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new Account(
+                        1,
+                        null,
+                        new BigDecimal("10000"),
+                        "COP"));
+    }
+
+    @Test
+    void shouldNotCreateAccountWithBlankAccountNumber() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new Account(
+                        1,
+                        "   ",
+                        new BigDecimal("10000"),
+                        "COP"));
+    }
+
+    @Test
+    void shouldNotCreateAccountWithNullCurrency() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new Account(
+                        1,
+                        "001234",
+                        new BigDecimal("10000"),
+                        null));
+    }
+
+    @Test
+    void shouldNotCreateAccountWithBlankCurrency() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new Account(
+                        1,
+                        "001234",
+                        new BigDecimal("10000"),
+                        "   "));
+    }
+
 }

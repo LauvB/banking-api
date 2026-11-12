@@ -12,6 +12,14 @@ public class Account {
 
     public Account(Integer id, String accountNumber, BigDecimal balance, String currency) {
 
+        if (accountNumber == null || accountNumber.isBlank()) {
+            throw new IllegalArgumentException("Account number must not be blank");
+        }
+
+        if (currency == null || currency.isBlank()) {
+            throw new IllegalArgumentException("Currency must not be blank");
+        }
+
         if (balance == null || balance.compareTo(BigDecimal.ZERO) < 0) {
             throw new InvalidAmountException("Initial balance must be zero or positive");
         }
@@ -24,6 +32,14 @@ public class Account {
     }
 
     public Account(Integer id, String accountNumber, BigDecimal balance, String currency, Integer ownerId) {
+
+        if (accountNumber == null || accountNumber.isBlank()) {
+            throw new IllegalArgumentException("Account number must not be blank");
+        }
+
+        if (currency == null || currency.isBlank()) {
+            throw new IllegalArgumentException("Currency must not be blank");
+        }
 
         if (balance == null || balance.compareTo(BigDecimal.ZERO) < 0) {
             throw new InvalidAmountException("Initial balance must be zero or positive");
