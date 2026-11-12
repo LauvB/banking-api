@@ -44,4 +44,4 @@ jobs:
       - name: Run tests and verify build
         env:
           DB_PASSWORD: ci-test-password
-        run: ./mvnw -B clean verify
+        run: ./mvnw -B clean verify -Pci
